@@ -22,7 +22,7 @@ class board {
   public $turn = 1;
   public $active_player;
   public $defending_player;
-  public $action_points = 5;
+  public $action_points = 4;
   public $momentum = 1;
 
   function __construct($class_a, $class_b){
@@ -353,5 +353,6 @@ function multiple_games($count) {
 }
 
 single_game();
+multiple_games(1000);
 
 ?>
