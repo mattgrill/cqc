@@ -19,10 +19,10 @@ class dice_defense extends dice {
 class board {
   public $player_a;
   public $player_b;
-  public $turn = 0;
+  public $turn = 1;
   public $active_player;
   public $defending_player;
-  public $action_points = 4;
+  public $action_points = 5;
   public $momentum = 1;
 
   function __construct($class_a, $class_b){
@@ -34,6 +34,10 @@ class board {
   }
 
   function change_active_player(){
+
+    // apply end of round status effects
+    $this->active_player->bleed();
+
     $temp = $this->active_player;
     unset($this->active_player);
     $this->active_player = $this->defending_player;
@@ -48,13 +52,14 @@ class board {
       'cut' => 4,
       'stun' => 4,
       'disarm' => 3,
-      'heal' => 4,
+      'heal cuts' => 4,
+      'heal broken bones' => 4,
       'block' => 1,
       'counter' => 2,
       'none' => 0,
     );
 
-    return $actions[$attack] + $this->active_player->broken_bones - $actions[$defense] - $this->defending_player->broken_bones;
+    return max(1, $actions[$attack] + $this->active_player->broken_bones - $actions[$defense] - $this->defending_player->broken_bones);
   }
 
   function check_hit($attack, $defense){
@@ -97,10 +102,10 @@ class board {
 
   function check_winner(){
     if ($this->player_a->health <= 0){
-      return 'Player B';
+      return $this->player_b->name . ' Wins!';
     }
     else if ($this->player_b->health <= 0){
-      return 'Player A';
+      return $this->player_a->name . ' Wins!';
     }
     else {
       return 'No Winner';
@@ -108,8 +113,6 @@ class board {
   }
 
   function play_turn(){
-    $this->turn++;
-
     // determine actions
     $attack = $this->active_player->choose_action($this, $this->defending_player);
     $defense = $this->defending_player->choose_response($this, $attack, $this->active_player);
@@ -127,11 +130,21 @@ class board {
         case 'punch' :
           $this->defending_player->take_hit();
           break;
+
         case 'kick' :
           $this->defending_player->take_broken_bone();
           break;
+
         case 'cut' :
           $this->defending_player->take_cut();
+          break;
+
+        case 'heal cuts':
+          $this->active_player->heal_cuts();
+          break;
+
+        case 'heal broken bones':
+          $this->active_player->heal_broken_bones();
           break;
       }
     }
@@ -140,9 +153,6 @@ class board {
         $this->active_player->take_hit();
       }
     }
-
-    // end of round effect
-    $this->active_player->bleed();
 
     // check for forced player change or winner
     if ($this->check_winner() === 'No Winner'){
@@ -153,6 +163,8 @@ class board {
         $this->momentum = 1;
       }
     }
+
+    $this->turn++;
 
     // return status
     $success = $result['hit'] ? 'success' : 'failure';
@@ -219,6 +231,20 @@ class player {
     }
   }
 
+  function heal_cuts(){
+    if ($this->bandages > 0){
+      $this->bandages--;
+      $this->cuts = 0;
+    }
+  }
+
+  function heal_broken_bones(){
+    if ($this->splints > 0){
+      $this->splints--;
+      $this->broken_bones = 0;
+    }
+  }
+
   function bleed(){
     $this->health -= $this->cuts;
   }
@@ -226,11 +252,35 @@ class player {
   function choose_action($board, $opponent){
     $actions = array('punch', 'kick', 'cut');
 
+    // if ($this->broken_bones === $this->broken_bones_max){
+    if ($this->broken_bones === $this->broken_bones_max && $this->splints > 0){
+      return 'heal broken bones';
+    }
+
+    if ($this->cuts === $this->cuts_max && $this->bandages > 0){
+      return 'heal cuts';
+    }
+
+    if ($board->momentum > 1){
+      $actions = array('kick', 'cut');
+    }
+
+    // Add in stun
+    // if ($board->action_points > 8){
+    //   return 'stun';
+    // }
+
     return $actions[rand(0, count($actions) - 1)];
   }
 
   function choose_response($board, $action, $opponent){
-    $actions = array('none', 'block', 'counter');
+    // $actions = array('none', 'block', 'counter');
+    $actions = array('none', 'block', 'block', 'block', 'counter');
+
+    // TODO prevent counter on negative / zero value;
+    if ($board->calc_action_points($action, 'counter') <= 0){
+      $actions = array('none', 'block', 'block', 'block');
+    }
 
     return $actions[rand(0, count($actions) - 1)];
   }
@@ -246,23 +296,44 @@ class player {
   }
 }
 
-$board = new board(new player('alpha'), new player('beta'));
-print $board->status() . PHP_EOL . PHP_EOL;
+function single_game(){
+  $board = new board(new player('ANDREW'), new player('BILLY'));
+  print $board->status() . PHP_EOL . PHP_EOL;
 
-while ($board->check_winner() == 'No Winner'){
-  print 'Turn: ' . ($board->turn + 1) . PHP_EOL;
-  print $board->status() . PHP_EOL;
-  print $board->play_turn() . PHP_EOL;
-  print $board->player_a->status() . PHP_EOL;
-  print $board->player_b->status() . PHP_EOL;
-  print $board->status() . PHP_EOL;
-  print PHP_EOL;
+  while ($board->check_winner() == 'No Winner'){
+    print 'Turn: ' . $board->turn . PHP_EOL;
+    print $board->status() . PHP_EOL;
+    $turn = $board->play_turn();
+    print $turn . PHP_EOL;
+    print $board->player_a->status() . PHP_EOL;
+    print $board->player_b->status() . PHP_EOL;
+    print $board->status() . PHP_EOL;
+    print PHP_EOL;
+  }
+  print $board->check_winner() . PHP_EOL;
 }
-print $board->check_winner() . PHP_EOL;
 
-// print $board->play_turn() . PHP_EOL;
-// print $board->player_a->status() . PHP_EOL;
-// print $board->player_b->status() . PHP_EOL;
-// print $board->status() . PHP_EOL;
+function multiple_games($count) {
+  $outcomes = array();
+
+  for ($i = 1; $i <= $count; $i++){
+    $board = new board(new player('ANDREW'), new player('BILLY'));
+
+    while ($board->check_winner() == 'No Winner'){
+      $turn = $board->play_turn();
+    }
+
+    if (!isset($outcomes[$board->check_winner()])){
+      $outcomes[$board->check_winner()] = 0;
+    }
+
+    $outcomes[$board->check_winner()]++;
+  }
+
+  ksort($outcomes);
+  print json_encode($outcomes) . PHP_EOL;
+}
+
+single_game();
 
 ?>
