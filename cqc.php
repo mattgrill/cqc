@@ -158,6 +158,10 @@ class board {
         case 'stun':
           $this->momentum += 3;
           break;
+
+        case 'disarm':
+          $this->defending_player->become_disarmed();
+          break;
       }
     }
     else {
@@ -257,12 +261,24 @@ class player {
     }
   }
 
+  function become_disarmed(){
+    $this->knives = 0;
+  }
+
   function bleed(){
     $this->health -= $this->cuts;
   }
 
   function choose_action($board, $opponent){
-    $actions = array('punch', 'kick', 'cut');
+    $actions = array('punch', 'kick');
+    
+    if ($opponent->knives > 0){
+      $actions[] = 'disarm';
+    }
+    
+    if ($this->knives > 0){
+      $actions[] = 'cut';
+    }
 
     // if ($this->broken_bones === $this->broken_bones_max){
     if ($this->broken_bones === $this->broken_bones_max && $this->splints > 0){
@@ -274,7 +290,15 @@ class player {
     }
 
     if ($board->momentum > 1){
-      $actions = array('kick', 'cut');
+      $actions = array('kick');
+
+      if ($opponent->knives > 0){
+        $actions[] = 'disarm';
+      }
+      
+      if ($this->knives > 0){
+        $actions[] = 'cut';
+      }
     }
 
     // Add in stun
