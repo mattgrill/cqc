@@ -68,11 +68,9 @@ class board {
     $hit = FALSE;
 
     if ($attack_roll === 'crit'){
-      $this->momentum++;
       $hit = TRUE;
     }
-
-    if ($attack_roll === 'hit'){
+    elseif ($attack_roll === 'hit'){
       switch ($defense){
         case 'block':
           if ($defense_roll !== 'block'){
@@ -117,12 +115,22 @@ class board {
     $attack = $this->active_player->choose_action($this, $this->defending_player);
     $defense = $this->defending_player->choose_response($this, $attack, $this->active_player);
 
-    // deduct points
+    // calculate action points
     $points_used = $this->calc_action_points($attack, $defense);
-    $this->action_points -= $points_used;
 
     // determine results
     $result = $this->check_hit($attack, $defense);
+
+    // spend action points
+    $this->action_points -= $points_used;
+    
+    if ($this->momentum > 1){
+      $this->momentum--;
+    }
+
+    if ($result['attack'] === 'crit'){
+      $this->momentum++;
+    }
 
     // apply results
     if($result['hit']){
@@ -145,6 +153,10 @@ class board {
 
         case 'heal broken bones':
           $this->active_player->heal_broken_bones();
+          break;
+
+        case 'stun':
+          $this->momentum += 3;
           break;
       }
     }
@@ -266,9 +278,11 @@ class player {
     }
 
     // Add in stun
-    // if ($board->action_points > 8){
-    //   return 'stun';
-    // }
+    if ($board->action_points > 8 && $board->momentum === 1){
+      if (rand(1,100) <= 30){
+        return 'stun';
+      }
+    }
 
     return $actions[rand(0, count($actions) - 1)];
   }
@@ -276,6 +290,10 @@ class player {
   function choose_response($board, $action, $opponent){
     // $actions = array('none', 'block', 'counter');
     $actions = array('none', 'block', 'block', 'block', 'counter');
+
+    if ($board->momentum > 1){
+      return 'none';
+    }
 
     // TODO prevent counter on negative / zero value;
     if ($board->calc_action_points($action, 'counter') <= 0){
