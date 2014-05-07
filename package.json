@@ -1,0 +1,20 @@
+{
+  "name": "cqc",
+  "version": "0.0.1",
+  "description": "CQC: Don't Bring a Gun Computer Simulator.",
+  "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:mattgrill/cqc.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mattgrill/cqc"
+  },
+  "homepage": "https://github.com/mattgrill/cqc",
+  "dependencies" : {
+    "colors" : "0.6.2",
+    "cli-table" : "0.3.0"
+  }
+}
