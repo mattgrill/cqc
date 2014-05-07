@@ -268,8 +268,8 @@ var colors                        = require('colors'),
         return table;
       }
     },
-    single_game                   = function(){
-      var game = new board(new player('ANDREW'), new player('BILLY')),
+    single_game                   = function(p1,p2){
+      var game = new board(new player(p1), new player(p2)),
           turn;
       console.log(game.status().red);
       while(game.check_winner() === 'No Winner'){
@@ -282,6 +282,28 @@ var colors                        = require('colors'),
         console.log('\n');
       }
       console.log(game.check_winner() + '\n'); 
-    };
-    single_game();
+    },
+    multiple_games                = function(count, p1, p2){
+      var outcome                 = {
+            'count' : count,
+            'wins'  : [],
+            'sum'   : {}
+          },
+          i;
+      for(i = 1; i <= count; i++){
+        var game = new board(new player(p1), new player(p2)),
+            turn;
+        while(game.check_winner() === 'No Winner'){
+          turn = game.play_turn();
+        }
+        outcome.wins.push(game.check_winner());
+      }
 
+      for(i = 0, l = outcome.wins.length; i < l; i++){
+        outcome.sum[outcome.wins[i]] = 1 + (outcome.sum[outcome.wins[i]] || 0);
+      }
+
+      console.log(outcome.sum);
+    }
+//single_game('ANDREW', 'BILLY');
+multiple_games(100, 'ANDREW', 'BILLY');
